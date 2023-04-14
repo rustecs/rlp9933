@@ -42,6 +42,8 @@ type dbRecord struct {
 	//tags []byte
 }
 
+// TODO make logger
+// TODO don't panic - procss errors correctly
 func main() {
 	fmt.Println("Start ...")
 
@@ -52,7 +54,7 @@ func main() {
 
 	startPosition := conf.status.position
 	processCount := startPosition
-	jobs := make(chan byte, limitThread-1)
+	jobs := make(chan byte, limitThread)
 	var wg sync.WaitGroup
 
 Loop:
@@ -74,10 +76,10 @@ Loop:
 				continue
 			}
 
-			wg.Add(1)
-			go conf.commonWorker(data2Process[i], jobs, &wg)
-			processCount++
 			jobs <- 1 //blocker
+			go conf.commonWorker(data2Process[i], jobs, &wg)
+			wg.Add(1)
+			processCount++
 
 			// no more result needed
 			if processCount >= maxResult {
@@ -131,6 +133,7 @@ func (c *config) commonWorker(task dbRecord, jobs <-chan byte, wg *sync.WaitGrou
 func (c *config) downloadFile(filepath string, url string) error {
 
 	resp, err := http.Get(url)
+	// TODO check error status and content types and size
 	if err != nil {
 		return nil // http error to /dev/null
 	}
